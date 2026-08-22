@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>名字注册 · 龙弈</title>
+    <style>
+        /* ================= 基础 ================= */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body,
+        html {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            font-family: 'Noto Serif SC', 'SimSun', 'Songti SC', serif;
+            background-color: #000;
+            cursor: crosshair;
+        }
+        ::-webkit-scrollbar {
+            width: 0px;
+            background: transparent;
+        }
+
+        /* ================= 注册页面容器 ================= */
+        #register-screen {
+            --gs-blood-red: #8a0303;
+            position: fixed;
+            inset: 0;
+            z-index: 10;
+            background-color: #050505;
+            background-size: cover;
+            background-position: center;
+            color: #e0e0e0;
+            user-select: none;
+            overflow: hidden;
+            animation: breathCamera 3.2s ease-in-out infinite alternate;
+        }
+        @keyframes breathCamera {
+            0% {
+                transform: translate(0px, 0px) rotate(0deg);
+            }
+            50% {
+                transform: translate(1px, 1px) rotate(0.1deg);
+            }
+            100% {
+                transform: translate(0px, 0px) rotate(0deg);
+            }
+        }
+
+        /* ========== CRT特效层 ========== */
+        #burn-in-layer {
+            position: absolute;
+            inset: 0;
+            z-index: 16;
+            pointer-events: none;
+            background: radial-gradient(circle at 30% 40%, rgba(200, 180, 150, 0.08) 0%, transparent 60%);
+            animation: burnIn 8s ease-in-out infinite;
+        }
+        @keyframes burnIn {
+            0% { opacity: 0; }
+            30% { opacity: 0.12; }
+            100% { opacity: 0; }
+        }
+
+        #foot-prints {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 6;
+            pointer-events: none;
+            opacity: 0.12;
+            overflow: hidden;
+            height: 40px;
+        }
+        .foot-print {
+            position: absolute;
+            bottom: 0;
+            width: 12px;
+            height: 20px;
+            background: rgba(80, 70, 60, 0.3);
+            border-radius: 50% 50% 30% 30%;
+            opacity: 0;
+            animation: footWalk 6s linear infinite;
+        }
+        @keyframes footWalk {
+            0% { transform: translateY(0) scale(1); opacity: 0.6; }
+            80% { opacity: 0.6; }
+            100% { transform: translateY(-120px) scale(0.8); opacity: 0; }
+        }
+
+        #gs-noise-layer {
+            position: absolute;
+            inset: 0;
+            z-index: 12;
+            pointer-events: none;
+            opacity: 0.15;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+            mix-blend-mode: overlay;
+            animation: noiseFlicker 0.3s steps(3) infinite;
+        }
+        @keyframes noiseFlicker {
+            0% { opacity: 0.12; transform: scale(1); }
+            50% { opacity: 0.22; transform: scale(1.02); }
+            100% { opacity: 0.15; transform: scale(0.98); }
+        }
+
+        @keyframes vignettePulseTight {
+            0% { background: radial-gradient(circle at center, transparent 22%, rgba(0, 0, 0, 0.75) 90%); }
+            100% { background: radial-gradient(circle at center, transparent 12%, rgba(0, 0, 0, 0.88) 90%); }
+        }
+        #gs-vignette {
+            position: absolute;
+            inset: 0;
+            z-index: 5;
+            pointer-events: none;
+            animation: vignettePulseTight 5s ease-in-out infinite alternate;
+        }
+
+        #gs-scanlines {
+            position: absolute;
+            inset: 0;
+            z-index: 13;
+            pointer-events: none;
+            background: repeating-linear-gradient(0deg,
+                    rgba(0, 0, 0, 0) 0px,
+                    rgba(0, 0, 0, 0) 2px,
+                    rgba(139, 0, 0, 0.08) 2px,
+                    rgba(139, 0, 0, 0.08) 4px);
+            animation: scanMove 6s linear infinite;
+        }
+        @keyframes scanMove {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(100%); }
+        }
+
+        #gs-blood-flash {
+            position: absolute;
+            inset: 0;
+            z-index: 15;
+            pointer-events: none;
+            background: radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(139, 0, 0, 0.35) 0%, transparent 70%);
+            opacity: 0;
+            transition: opacity 0.1s;
+            mix-blend-mode: multiply;
+        }
+        #gs-blood-flash.active {
+            opacity: 1;
+            transition: opacity 0s;
+        }
+
+        @keyframes crtDistort {
+            0% { transform: skewX(0deg); filter: hue-rotate(0deg); }
+            48% { transform: skewX(0deg); }
+            50% { transform: skewX(1.5deg); filter: hue-rotate(8deg); }
+            52% { transform: skewX(-1.5deg); filter: hue-rotate(-8deg); }
+            100% { transform: skewX(0deg); }
+        }
+        .crt-distort {
+            animation: crtDistort 8s infinite;
+        }
+
+        @keyframes screenShake {
+            0% { transform: translate(0, 0); }
+            10% { transform: translate(-4px, 4px); }
+            20% { transform: translate(4px, -4px); }
+            30% { transform: translate(-4px, -4px); }
+            40% { transform: translate(4px, 4px); }
+            50% { transform: translate(-2px, 2px); }
+            60% { transform: translate(2px, -2px); }
+            70% { transform: translate(-2px, -2px); }
+            80% { transform: translate(2px, 2px); }
+            90% { transform: translate(-1px, 1px); }
+            100% { transform: translate(0, 0); }
+        }
+        .shaking {
+            animation: screenShake 0.3s steps(2) !important;
+        }
+
+        #lamp-flicker-overlay {
+            position: absolute;
+            inset: 0;
+            z-index: 11;
+            pointer-events: none;
+            background: rgba(0, 0, 0, 0);
+            animation: lampFlickerOverlay 4.6s ease-in-out infinite;
+            mix-blend-mode: multiply;
+        }
+        @keyframes lampFlickerOverlay {
+            0% { background: rgba(0, 0, 0, 0); }
+            82% { background: rgba(0, 0, 0, 0); }
+            84% { background: rgba(0, 0, 0, 0.28); }
+            86% { background: rgba(0, 0, 0, 0.06); }
+            88% { background: rgba(0, 0, 0, 0.35); }
+            90% { background: rgba(0, 0, 0, 0.02); }
+            92% { background: rgba(0, 0, 0, 0.20); }
+            94% { background: rgba(0, 0, 0, 0); }
+            100% { background: rgba(0, 0, 0, 0); }
+        }
+
+        #spotlight {
+            position: absolute;
+            inset: 0;
+            z-index: 10;
+            pointer-events: none;
+            background: radial-gradient(circle 350px at var(--sx, 50%) var(--sy, 50%),
+                    transparent 0%,
+                    rgba(0, 0, 0, 0.18) 18%,
+                    rgba(0, 0, 0, 0.48) 38%,
+                    rgba(0, 0, 0, 0.78) 58%,
+                    rgba(0, 0, 0, 0.94) 78%,
+                    rgba(0, 0, 0, 0.99) 100%);
+            transition: background 0.06s ease-out;
+            will-change: background;
+        }
+        #spotlight::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle 240px at var(--sx, 50%) var(--sy, 50%),
+                    rgba(255, 220, 180, 0.04) 0%,
+                    transparent 50%);
+            pointer-events: none;
+            mix-blend-mode: screen;
+        }
+        #spotlight.idle {
+            background: radial-gradient(circle 350px at 50% 50%,
+                    transparent 0%,
+                    rgba(0, 0, 0, 0.28) 18%,
+                    rgba(0, 0, 0, 0.58) 38%,
+                    rgba(0, 0, 0, 0.85) 58%,
+                    rgba(0, 0, 0, 0.97) 78%,
+                    rgba(0, 0, 0, 0.99) 100%) !important;
+        }
+        #spotlight.idle::after {
+            opacity: 0.3;
+        }
+
+        #gs-particle-canvas {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            opacity: 0.7;
+            pointer-events: none;
+        }
+
+        #gs-flashbulb {
+            position: absolute;
+            inset: 0;
+            background: white;
+            z-index: 50;
+            opacity: 0;
+            pointer-events: none;
+            mix-blend-mode: exclusion;
+            transition: opacity 0.02s;
+        }
+        #gs-subliminal-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 12vw;
+            font-weight: 900;
+            color: #8a0303;
+            white-space: nowrap;
+            z-index: 45;
+            opacity: 0;
+            pointer-events: none;
+            font-family: 'SimSun', serif;
+            mix-blend-mode: color-dodge;
+            transition: opacity 0.02s;
+        }
+
+        #fragment-text {
+            position: absolute;
+            bottom: 20%;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 40;
+            color: rgba(180, 140, 120, 0.7);
+            font-size: 14px;
+            letter-spacing: 0.3em;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.8s ease;
+            font-family: 'Noto Serif SC', 'SimSun', serif;
+            white-space: nowrap;
+            text-shadow: 0 0 12px rgba(80, 20, 10, 0.5);
+        }
+        #fragment-text.show { opacity: 1; }
+
+        .gs-ghost-silhouette {
+            position: absolute;
+            bottom: -5vh;
+            left: 10vw;
+            width: 50vw;
+            height: 90vh;
+            z-index: 8;
+            opacity: 0;
+            pointer-events: none;
+            filter: drop-shadow(0 0 20px #8a0303) blur(2px);
+            transform: scaleY(1.2);
+            transition: left 0.25s ease-out;
+        }
+        .gs-ghost-silhouette.ghost-active {
+            opacity: 0.9;
+            animation: gs-ghost-glitch 0.2s infinite alternate;
+        }
+        @keyframes gs-ghost-glitch {
+            0% { transform: scaleY(1.2) translate(0, 0) skewX(0deg); filter: hue-rotate(0deg) blur(2px); }
+            50% { transform: scaleY(1.2) translate(-30px, 15px) skewX(-20deg); filter: hue-rotate(90deg) blur(8px); }
+            100% { transform: scaleY(1.2) translate(30px, -15px) skewX(15deg); filter: hue-rotate(-90deg) blur(1px); }
+        }
+
+        #ghost-face {
+            position: absolute;
+            top: 15%;
+            right: 8vw;
+            width: 140px;
+            height: 180px;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 14;
+            filter: blur(4px) sepia(0.8);
+            transition: opacity 0.15s ease;
+        }
+        #ghost-face svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* ================================================================
+                   ★ 页面跳转过渡（与index.html保持一致）
+                   ================================================================ */
+        #page-transition {
+            position: fixed;
+            inset: 0;
+            z-index: 300000;
+            pointer-events: none;
+            background: #050505;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.45s ease, visibility 0.45s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #page-transition.active {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+        }
+        #page-transition .transition-content {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 14px;
+            letter-spacing: 0.3em;
+            font-family: 'Noto Serif SC', 'SimSun', serif;
+            transform: scale(0.95);
+            opacity: 0;
+            transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.5s ease;
+        }
+        #page-transition.active .transition-content {
+            transform: scale(1);
+            opacity: 1;
+        }
+        #page-transition .transition-spinner {
+            width: 32px;
+            height: 32px;
+            margin: 0 auto 16px;
+            border: 2px solid rgba(138, 3, 3, 0.15);
+            border-top-color: rgba(138, 3, 3, 0.6);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* ================================================================
+                   ★ 注册界面 - 居中卡片
+                   ================================================================ */
+        .register-container {
+            position: relative;
+            z-index: 20;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .register-box {
+            width: min(420px, 100%);
+            background: rgba(8, 6, 10, 0.92);
+            border: 1px solid rgba(138, 3, 3, 0.5);
+            border-radius: 8px;
+            padding: 40px 32px 32px 32px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(138, 3, 3, 0.2);
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(8px);
+            animation: boxFadeIn 0.6s ease-out;
+        }
+        @keyframes boxFadeIn {
+            0% { opacity: 0; transform: scale(0.92) translateY(12px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .register-box::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse at 50% 30%, rgba(138, 3, 3, 0.08), transparent 70%);
+            pointer-events: none;
+        }
+
+        .reg-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #cc8a8a;
+            letter-spacing: 0.3em;
+            margin-bottom: 6px;
+            font-family: 'Noto Serif SC', 'SimSun', serif;
+            position: relative;
+            z-index: 1;
+        }
+        .reg-sub {
+            font-size: 11px;
+            color: rgba(180, 140, 120, 0.6);
+            letter-spacing: 0.12em;
+            margin-bottom: 28px;
+            font-family: 'Noto Serif SC', 'SimSun', serif;
+            position: relative;
+            z-index: 1;
+        }
+
+        .reg-input-wrap {
+            position: relative;
+            border: 1px solid rgba(138, 3, 3, 0.3);
+            border-radius: 4px;
+            background: rgba(0, 0, 0, 0.4);
+            transition: border-color 0.3s;
+            z-index: 1;
+        }
+        .reg-input-wrap:focus-within {
+            border-color: rgba(138, 3, 3, 0.7);
+            box-shadow: 0 0 20px rgba(138, 3, 3, 0.08);
+        }
+        .reg-input-wrap input {
+            width: 100%;
+            padding: 14px 18px;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: #e0d0c8;
+            font-size: 17px;
+            font-family: 'Noto Serif SC', 'SimSun', serif;
+            letter-spacing: 0.12em;
+            text-align: center;
+        }
+        .reg-input-wrap input::placeholder {
+            color: rgba(180, 160, 150, 0.25);
+            font-size: 13px;
+            letter-spacing: 0.08em;
+        }
+
+        .reg-error {
+            min-height: 22px;
+            margin-top: 12px;
+            font-size: 12px;
+            color: #cc5555;
+            letter-spacing: 0.06em;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 1;
+            position: relative;
+        }
+        .reg-error.show {
+            opacity: 1;
+        }
+
+        .reg-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-top: 22px;
+            z-index: 1;
+            position: relative;
+        }
+        .reg-btn {
+            padding: 10px 32px;
+            border: 1px solid rgba(138, 3, 3, 0.4);
+            border-radius: 4px;
+            background: transparent;
+            color: #bbb;
+            font-size: 12px;
+            font-family: 'Noto Serif SC', 'SimSun', serif;
+            letter-spacing: 0.2em;
+            cursor: pointer;
+            transition: all 0.25s;
+        }
+        .reg-btn:hover {
+            border-color: rgba(138, 3, 3, 0.7);
+            color: #fff;
+            background: rgba(138, 3, 3, 0.08);
+        }
+        .reg-btn.primary {
+            border-color: rgba(138, 3, 3, 0.6);
+            color: #ddb0b0;
+        }
+        .reg-btn.primary:hover {
+            border-color: #8a0303;
+            color: #fff;
+            background: rgba(138, 3, 3, 0.15);
+        }
+
+        /* 底部提示 */
+        .reg-hint {
+            position: absolute;
+            bottom: 4vh;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 30;
+            color: rgba(138, 3, 3, 0.25);
+            font-size: 11px;
+            letter-spacing: 0.3em;
+            pointer-events: none;
+            font-family: 'Noto Serif SC', 'SimSun', serif;
+            animation: hintPulse 3s ease-in-out infinite;
+        }
+        @keyframes hintPulse {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.7; }
+        }
+
+        /* ===== 响应式 ===== */
+        @media (max-width: 480px) {
+            .register-box {
+                padding: 28px 20px 24px 20px;
+            }
+            .reg-title {
+                font-size: 14px;
+            }
+            .reg-input-wrap input {
+                font-size: 15px;
+                padding: 12px 14px;
+            }
+            .reg-btn {
+                padding: 8px 20px;
+                font-size: 11px;
+            }
+            .reg-sub {
+                font-size: 10px;
+                margin-bottom: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ================= 主容器 ================= -->
+    <div id="register-screen" class="crt-distort">
+        <!-- CRT特效层 -->
+        <div id="gs-vignette"></div>
+        <div id="lamp-flicker-overlay"></div>
+        <div id="spotlight"></div>
+        <canvas id="gs-particle-canvas"></canvas>
+        <div id="gs-noise-layer"></div>
+        <div id="gs-scanlines"></div>
+        <div id="gs-blood-flash"></div>
+        <div id="burn-in-layer"></div>
+        <div id="gs-flashbulb"></div>
+        <div id="gs-subliminal-text"></div>
+        <div id="fragment-text"></div>
+        <div class="gs-ghost-silhouette" id="gs-ghost-silhouette">
+            <svg viewBox="0 0 100 200" preserveAspectRatio="none">
+                <path d="M40,30 C30,10 70,10 60,30 C65,60 75,80 80,120 C85,160 90,200 70,200 C50,200 45,150 40,120 C35,80 35,60 40,30 Z" fill="#000" />
+                <ellipse cx="45" cy="45" rx="4" ry="6" fill="#8a0303" filter="blur(1px)"/>
+                <ellipse cx="58" cy="48" rx="3" ry="5" fill="#8a0303" filter="blur(1px)"/>
+                <path d="M48,70 Q52,65 56,70 Q60,110 52,140 Q44,110 48,70 Z" fill="#050505" stroke="#8a0303" stroke-width="0.5"/>
+                <path d="M35,60 Q15,100 5,180" fill="none" stroke="#000" stroke-width="5" filter="blur(2px)"/>
+                <path d="M65,65 Q85,110 95,170" fill="none" stroke="#000" stroke-width="4" filter="blur(2px)"/>
+            </svg>
+        </div>
+        <div id="ghost-face">
+            <svg viewBox="0 0 100 130">
+                <ellipse cx="50" cy="45" rx="30" ry="40" fill="#111" />
+                <ellipse cx="35" cy="42" rx="6" ry="8" fill="#700" />
+                <ellipse cx="65" cy="42" rx="6" ry="8" fill="#700" />
+                <path d="M35 80 Q50 100 65 80" stroke="#700" stroke-width="2" fill="none" />
+            </svg>
+        </div>
+
+        <!-- 主内容 -->
+        <div class="register-container">
+            <div class="register-box">
+                <div class="reg-title">✦ 名字注册 ✦</div>
+                <div class="reg-sub">它将铭刻于轮回之中</div>
+                <div class="reg-input-wrap">
+                    <input type="text" id="reg-name-input" placeholder="输入你的名字..." autocomplete="off" maxlength="20">
+                </div>
+                <div class="reg-error" id="reg-error"></div>
+                <div class="reg-actions">
+                    <button type="button" class="reg-btn" id="reg-back">返回</button>
+                    <button type="button" class="reg-btn primary" id="reg-confirm">确认</button>
+                </div>
+            </div>
+            <div class="reg-hint">✦ 名字将保存在本地 ✦</div>
+        </div>
+
+        <!-- 页面跳转过渡 -->
+        <div id="page-transition">
+            <div class="transition-content">
+                <div class="transition-spinner"></div>
+                <span>正在进入...</span>
+            </div>
+        </div>
+
+        <!-- ================================================================
+        JAVASCRIPT
+        ================================================================ -->
+        <script>
+            (function() {
+                'use strict';
+
+                // ============================================================
+                // ★ 存储键名（与index.html保持一致）
+                // ============================================================
+                var STORAGE_KEY = 'longyi_player_name';
+                var LOGIN_KEY = 'longyi_logged_in';
+
+                // ============================================================
+                // DOM 引用
+                // ============================================================
+                var nameInput = document.getElementById('reg-name-input');
+                var nameError = document.getElementById('reg-error');
+                var nameConfirm = document.getElementById('reg-confirm');
+                var nameBack = document.getElementById('reg-back');
+                var pageTransition = document.getElementById('page-transition');
+                var spotlight = document.getElementById('spotlight');
+
+                var specialNameAttempted = false;
+
+                // ============================================================
+                // ★ 检查是否已登录（如果已登录则直接跳转大厅）
+                // ============================================================
+                function checkLoggedIn() {
+                    var loggedIn = localStorage.getItem(LOGIN_KEY);
+                    if (loggedIn === 'true') {
+                        pageTransition.classList.add('active');
+                        setTimeout(function() {
+                            window.location.href = '大厅.html';
+                        }, 500);
+                        return true;
+                    }
+                    return false;
+                }
+
+                // ============================================================
+                // ★ 页面加载时检查登录状态 + 预填名字
+                // ============================================================
+                window.addEventListener('load', function() {
+                    // 如果已登录，直接跳转
+                    if (checkLoggedIn()) return;
+
+                    // 预填已保存的名字（仅预填，不自动登录）
+                    var savedName = localStorage.getItem(STORAGE_KEY);
+                    if (savedName) {
+                        nameInput.value = savedName;
+                    }
+
+                    // 聚焦输入框
+                    nameInput.focus();
+                    nameInput.select();
+
+                    // 启动音频（保留恐怖氛围）
+                    initAudio();
+
+                    // 手电筒闲置计时
+                    spotlightIdleTimer = setTimeout(function() {
+                        if (spotlight && !isMouseOver) {
+                            spotlight.classList.add('idle');
+                        }
+                    }, 3000);
+                });
+
+                // ============================================================
+                // ★ 音频初始化（与index.html完全一致）
+                // ============================================================
+                var audioCtx = null;
+                var isAudioReady = false;
+                var heartInterval = null;
+                var scareTimer = null;
+                var lobbyActive = true;
+                var menuStaySeconds = 0;
+                var idleTime = 0;
+                var isMouseOver = true;
+                var spotlightIdleTimer = null;
+
+                function initAudio() {
+                    if (isAudioReady) return;
+                    try {
+                        audioCtx = new(window.AudioContext || window.webkitAudioContext)();
+                        if (audioCtx.state === 'suspended') audioCtx.resume();
+
+                        // 低频嗡鸣
+                        function droneLoop() {
+                            if (!lobbyActive || !audioCtx) return;
+                            var droneOsc = audioCtx.createOscillator();
+                            var droneGain = audioCtx.createGain();
+                            var filter = audioCtx.createBiquadFilter();
+                            droneOsc.type = 'sawtooth';
+                            droneOsc.frequency.setValueAtTime(55, audioCtx.currentTime);
+                            droneOsc.frequency.exponentialRampToValueAtTime(45, audioCtx.currentTime + 8);
+                            filter.type = 'lowpass';
+                            filter.frequency.value = 120;
+                            filter.Q.value = 0.5;
+                            droneGain.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+                            droneGain.gain.linearRampToValueAtTime(0.04, audioCtx.currentTime + 1.5);
+                            droneGain.gain.setValueAtTime(0.04, audioCtx.currentTime + 5);
+                            droneGain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 12);
+                            droneOsc.connect(filter);
+                            filter.connect(droneGain);
+                            droneGain.connect(audioCtx.destination);
+                            droneOsc.start(audioCtx.currentTime);
+                            droneOsc.stop(audioCtx.currentTime + 13);
+                            setTimeout(droneLoop, 14000);
+                        }
+                        droneLoop();
+
+                        // 低语
+                        function playWhisper() {
+                            if (!lobbyActive || !audioCtx || audioCtx.state !== 'running') return;
+                            var now = audioCtx.currentTime;
+                            var bufferSize = audioCtx.sampleRate * 1.5;
+                            var buf = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                            var data = buf.getChannelData(0);
+                            for (var i = 0; i < bufferSize; i++) {
+                                var env = Math.sin(i / bufferSize * Math.PI) * 0.15;
+                                data[i] = (Math.random() * 2 - 1) * env * 0.12;
+                            }
+                            var src = audioCtx.createBufferSource();
+                            src.buffer = buf;
+                            var gain = audioCtx.createGain();
+                            gain.gain.setValueAtTime(0.0001, now);
+                            gain.gain.linearRampToValueAtTime(0.015, now + 0.3);
+                            gain.gain.exponentialRampToValueAtTime(0.0001, now + 1.8);
+                            var filter2 = audioCtx.createBiquadFilter();
+                            filter2.type = 'bandpass';
+                            filter2.frequency.value = 800 + Math.random() * 400;
+                            filter2.Q.value = 0.6;
+                            src.connect(filter2);
+                            filter2.connect(gain);
+                            gain.connect(audioCtx.destination);
+                            src.start(now);
+                            src.stop(now + 2);
+                        }
+                        setInterval(function() {
+                            if (lobbyActive && audioCtx && audioCtx.state === 'running') {
+                                playWhisper();
+                            }
+                        }, 8000 + Math.random() * 10000);
+
+                        // 心跳
+                        scheduleHeartbeat(2000);
+                        isAudioReady = true;
+                    } catch (e) {
+                        console.warn('音频初始化失败:', e);
+                    }
+                }
+
+                function playHeartbeat(volume) {
+                    if (!audioCtx || audioCtx.state !== 'running') return;
+                    var now = audioCtx.currentTime;
+                    var osc1 = audioCtx.createOscillator();
+                    var gain1 = audioCtx.createGain();
+                    osc1.type = 'sine';
+                    osc1.frequency.setValueAtTime(68, now);
+                    osc1.frequency.exponentialRampToValueAtTime(42, now + 0.15);
+                    gain1.gain.setValueAtTime(0.0001, now);
+                    gain1.gain.linearRampToValueAtTime(volume || 0.15, now + 0.02);
+                    gain1.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
+                    osc1.connect(gain1);
+                    gain1.connect(audioCtx.destination);
+                    osc1.start(now);
+                    osc1.stop(now + 0.22);
+                    var osc2 = audioCtx.createOscillator();
+                    var gain2 = audioCtx.createGain();
+                    osc2.type = 'sine';
+                    osc2.frequency.setValueAtTime(52, now + 0.25);
+                    osc2.frequency.exponentialRampToValueAtTime(38, now + 0.4);
+                    gain2.gain.setValueAtTime(0.0001, now + 0.25);
+                    gain2.gain.linearRampToValueAtTime((volume || 0.12) * 0.8, now + 0.27);
+                    gain2.gain.exponentialRampToValueAtTime(0.0001, now + 0.45);
+                    osc2.connect(gain2);
+                    gain2.connect(audioCtx.destination);
+                    osc2.start(now + 0.25);
+                    osc2.stop(now + 0.47);
+                    var bloodFlash = document.getElementById('gs-blood-flash');
+                    if (bloodFlash) {
+                        bloodFlash.classList.add('active');
+                        setTimeout(function() { bloodFlash.classList.remove('active'); }, 150);
+                        setTimeout(function() {
+                            bloodFlash.classList.add('active');
+                            setTimeout(function() { bloodFlash.classList.remove('active'); }, 120);
+                        }, 280);
+                    }
+                }
+
+                function scheduleHeartbeat(delay) {
+                    if (heartInterval) clearTimeout(heartInterval);
+                    var nextDelay = 3000 + Math.random() * 8000;
+                    heartInterval = setTimeout(function() {
+                        if (audioCtx && audioCtx.state === 'running' && lobbyActive) {
+                            if (Math.random() > 0.2) playHeartbeat(0.12 + Math.random() * 0.08);
+                            scheduleHeartbeat(0);
+                        }
+                    }, delay || nextDelay);
+                }
+
+                // ============================================================
+                // ★ 鼠标手电筒跟随（与index.html一致）
+                // ============================================================
+                document.addEventListener('mousemove', function(e) {
+                    isMouseOver = true;
+                    if (spotlight) {
+                        spotlight.classList.remove('idle');
+                        var px = (e.clientX / window.innerWidth * 100);
+                        var py = (e.clientY / window.innerHeight * 100);
+                        spotlight.style.setProperty('--sx', px + '%');
+                        spotlight.style.setProperty('--sy', py + '%');
+                    }
+                    idleTime = 0;
+                    if (spotlightIdleTimer) {
+                        clearTimeout(spotlightIdleTimer);
+                        spotlightIdleTimer = null;
+                    }
+                });
+                document.addEventListener('mouseleave', function() {
+                    isMouseOver = false;
+                    if (spotlight) spotlight.classList.add('idle');
+                });
+                document.addEventListener('mouseenter', function() {
+                    isMouseOver = true;
+                    if (spotlight) spotlight.classList.remove('idle');
+                });
+
+                // ============================================================
+                // ★ 停留时间计时（与index.html一致）
+                // ============================================================
+                setInterval(function() {
+                    if (lobbyActive) menuStaySeconds++;
+                }, 1000);
+
+                // ============================================================
+                // ★ 碎片文字闪现（与index.html一致）
+                // ============================================================
+                var fragmentTimeout = null;
+                var fragmentPhrases = ['你跑不掉', '你永远跑不掉的', '你在看什么', '徐若林', '快跑'];
+                var fragmentEl = document.getElementById('fragment-text');
+
+                function showFragment() {
+                    if (!lobbyActive || !fragmentEl) return;
+                    var phrase = fragmentPhrases[Math.floor(Math.random() * fragmentPhrases.length)];
+                    fragmentEl.textContent = phrase;
+                    fragmentEl.classList.add('show');
+                    if (fragmentTimeout) clearTimeout(fragmentTimeout);
+                    fragmentTimeout = setTimeout(function() {
+                        fragmentEl.classList.remove('show');
+                    }, 3000);
+                }
+                setInterval(function() {
+                    if (lobbyActive && menuStaySeconds > 5) {
+                        showFragment();
+                    }
+                }, 10000 + Math.random() * 8000);
+
+                // ============================================================
+                // ★ 跳吓（与index.html一致，但更柔和）
+                // ============================================================
+                var flashbulb = document.getElementById('gs-flashbulb');
+                var subliminalText = document.getElementById('gs-subliminal-text');
+                var ghostSilhouette = document.getElementById('gs-ghost-silhouette');
+                var ghostFace = document.getElementById('ghost-face');
+                var bloodFlash = document.getElementById('gs-blood-flash');
+                var screen = document.getElementById('register-screen');
+                var scaryPhrases = ['你在看什么', '回头', '她就在你身后', '快跑', '别眨眼', '找到你了', '你逃不掉的'];
+
+                function triggerRandomScare() {
+                    if (!lobbyActive) return;
+                    var scareProb = Math.min(0.30, 0.05 + menuStaySeconds * 0.005);
+                    if (Math.random() > scareProb) {
+                        var delay = Math.max(2000, 4000 + Math.random() * 10000 - menuStaySeconds * 20);
+                        scareTimer = setTimeout(triggerRandomScare, delay);
+                        return;
+                    }
+                    var roll = Math.random();
+                    if (roll < 0.3) {
+                        if (flashbulb) {
+                            flashbulb.style.transition = 'none';
+                            flashbulb.style.opacity = '0.5';
+                            setTimeout(function() { flashbulb.style.opacity = '0'; }, 40 + Math.random() * 50);
+                        }
+                    } else if (roll < 0.6) {
+                        if (subliminalText) {
+                            subliminalText.innerText = scaryPhrases[Math.floor(Math.random() * scaryPhrases.length)];
+                            subliminalText.style.opacity = '0.6';
+                            subliminalText.style.transform = 'translate(-50%,-50%) scale(' + (1 + Math.random() * 0.5) +
+                                ')';
+                            setTimeout(function() { subliminalText.style.opacity = '0'; }, 40 + Math.random() * 50);
+                        }
+                    } else {
+                        screen.classList.add('shaking');
+                        if (bloodFlash) bloodFlash.classList.add('active');
+                        setTimeout(function() {
+                            screen.classList.remove('shaking');
+                            bloodFlash.classList.remove('active');
+                        }, 200);
+                    }
+                    playHeartbeat(0.12);
+                    var delay = Math.max(2000, 4000 + Math.random() * 10000 - menuStaySeconds * 20);
+                    scareTimer = setTimeout(triggerRandomScare, delay);
+                }
+
+                var scareTimer = null;
+                setTimeout(function() {
+                    if (lobbyActive) {
+                        scareTimer = setTimeout(triggerRandomScare, 5000);
+                    }
+                }, 3000);
+
+                // ============================================================
+                // ★ 核心：名字确认逻辑
+                // ============================================================
+                function handleConfirm() {
+                    var name = nameInput.value.trim();
+                    if (!name) {
+                        nameError.textContent = '请输入一个名字';
+                        nameError.classList.add('show');
+                        return;
+                    }
+
+                    // ★ 检查特殊名字（仙辞 / 杜偶发）
+                    if (name === '仙辞' || name === '杜偶发') {
+                        if (!specialNameAttempted) {
+                            // 第一次：显示"名字已被注册"
+                            nameError.textContent = '名字已被注册';
+                            nameError.classList.add('show');
+                            specialNameAttempted = true;
+                            nameInput.style.borderColor = 'rgba(200, 80, 80, 0.6)';
+                            setTimeout(function() {
+                                nameInput.style.borderColor = '';
+                            }, 600);
+                            return;
+                        } else {
+                            // 第二次：跳转到轮回一.html
+                            nameError.classList.remove('show');
+                            pageTransition.classList.add('active');
+                            setTimeout(function() {
+                                window.location.href = '轮回一.html';
+                            }, 600);
+                            return;
+                        }
+                    }
+
+                    // ★ 普通名字：保存并登录
+                    nameError.classList.remove('show');
+                    localStorage.setItem(STORAGE_KEY, name);
+                    localStorage.setItem(LOGIN_KEY, 'true');
+
+                    // 跳转到大厅
+                    pageTransition.classList.add('active');
+                    setTimeout(function() {
+                        window.location.href = '大厅.html';
+                    }, 600);
+                }
+
+                // ============================================================
+                // ★ 返回按钮：回到主页面 index.html
+                // ============================================================
+                function handleBack() {
+                    pageTransition.classList.add('active');
+                    setTimeout(function() {
+                        window.location.href = 'index.html';
+                    }, 600);
+                }
+
+                // ============================================================
+                // ★ 绑定事件
+                // ============================================================
+                nameConfirm.addEventListener('click', handleConfirm);
+                nameBack.addEventListener('click', handleBack);
+                nameInput.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleConfirm();
+                    }
+                    if (e.key === 'Escape') {
+                        handleBack();
+                    }
+                    // 输入时清除错误状态
+                    if (nameError.classList.contains('show') && nameError.textContent !== '名字已被注册') {
+                        nameError.classList.remove('show');
+                    }
+                });
+                nameInput.addEventListener('input', function() {
+                    if (nameError.classList.contains('show') && nameError.textContent !== '名字已被注册') {
+                        nameError.classList.remove('show');
+                    }
+                    // 如果输入的内容变化了，重置特殊名字尝试状态（但保留已注册提示）
+                    if (specialNameAttempted) {
+                        specialNameAttempted = false;
+                    }
+                });
+
+                // ============================================================
+                // ★ 暴露停止函数（用于页面卸载清理）
+                // ============================================================
+                function stopRegister() {
+                    lobbyActive = false;
+                    if (heartInterval) clearTimeout(heartInterval);
+                    if (scareTimer) clearTimeout(scareTimer);
+                    if (audioCtx) {
+                        try { audioCtx.close(); } catch (e) {}
+                    }
+                }
+                window.stopRegister = stopRegister;
+
+                console.log('📝 名字注册页面已加载，等待输入');
+            })();
+        </script>
+    </body>
+</html>
